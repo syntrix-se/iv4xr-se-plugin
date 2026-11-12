@@ -27,6 +27,10 @@ namespace Iv4xr.SpaceEngineers
         /// <summary>Zustand eines Grids: Strom, Luft, Inventare und ob sie ueber Foerderer mit dem groessten Container verbunden sind.</summary>
         TgGridReport GridReport(string gridId);
 
+        /// <summary>Entfernt das Grid mit dieser Kennung samt mechanisch verbundenen Grids (Rotoren, Kolben).
+        /// Nur im eigenen Spiel; die Kennung ist Pflicht. Gibt die Kennungen der entfernten Grids zurueck.</summary>
+        List<string> RemoveGrid(string gridId);
+
         /// <summary>Setzt den Namen des Grids.</summary>
         void RenameGrid(string gridId, string name);
 

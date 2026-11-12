@@ -211,6 +211,42 @@ namespace Iv4xr.SePlugin.Control
             return bericht;
         }
 
+        public List<string> RemoveGrid(string gridId)
+        {
+            if (!Sync.IsServer)
+            {
+                throw new InvalidOperationException("Entfernen nur im eigenen Spiel (Einzelspieler oder Gastgeber)");
+            }
+
+            if (string.IsNullOrWhiteSpace(gridId))
+            {
+                throw new ArgumentException("Grid-Kennung fehlt");
+            }
+
+            var grid = ZielGrid(gridId);
+            var gruppe = new List<IMyCubeGrid>();
+            MyAPIGateway.GridGroups.GetGroup(grid, GridLinkTypeEnum.Mechanical, gruppe);
+            if (gruppe.Count == 0)
+            {
+                gruppe.Add(grid);
+            }
+
+            var gesteuert = MySession.Static.ControlledEntity as MyCubeBlock;
+            if (gesteuert != null && gruppe.Contains(gesteuert.CubeGrid))
+            {
+                throw new InvalidOperationException("Die Figur sitzt in diesem Grid; erst aussteigen");
+            }
+
+            var weg = new List<string>();
+            foreach (var g in gruppe.OfType<MyCubeGrid>())
+            {
+                weg.Add(g.EntityId.ToString());
+                g.Close();
+            }
+
+            return weg;
+        }
+
         public void RenameGrid(string gridId, string name)
         {
             if (string.IsNullOrWhiteSpace(name))
