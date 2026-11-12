@@ -33,9 +33,16 @@ namespace Iv4xr.SePlugin.Communication
         public static void BindService<TType>(string sessionID, TType instance, string methodPrefix, Type type)
         {
             var smd = Handler.GetSessionHandler(sessionID).MetaData;
-            foreach (MethodInfo method1 in ((IEnumerable<MethodInfo>) type
-                        .GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly))
-            )
+            // TG: bei Schnittstellen auch geerbte Methoden anbieten (z. B. IGravityGeneratorBaseAdmin.SetGravityAcceleration)
+            var methoden = type.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly)
+                    .AsEnumerable();
+            if (type.IsInterface)
+            {
+                methoden = methoden.Concat(type.GetInterfaces().SelectMany(basis =>
+                    basis.GetMethods(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly)));
+            }
+
+            foreach (MethodInfo method1 in methoden)
             {
                 if (method1.Name.StartsWith("get_"))
                 {

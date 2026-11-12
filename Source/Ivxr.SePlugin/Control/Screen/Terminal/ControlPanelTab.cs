@@ -94,7 +94,11 @@ namespace Iv4xr.SePlugin.Control.Screen.Terminal
 
         public override TerminalControlPanelData Data()
         {
-            var listBox = UntypedController.GetInstanceFieldOrThrow<MyGuiControlListbox>("m_blockListbox");
+            // TG: Ohne Grid (Terminal ohne Block geoeffnet, z. B. Character.ShowTerminal) baut das Spiel keine Blockliste.
+            var listBox = UntypedController.GetInstanceField<MyGuiControlListbox>("m_blockListbox")
+                    ?? throw new InvalidOperationException(
+                        "Bedienfeld ohne Blockliste: Terminal wurde ohne Block geoeffnet. " +
+                        "Mit Admin.Character.ShowTerminal(blockId) an einem Block oeffnen.");
 
 
             return new TerminalControlPanelData()

@@ -1,4 +1,7 @@
-﻿using Iv4xr.PluginLib;
+﻿using System.Collections.Generic;
+using Iv4xr.PluginLib;
+using Sandbox.Game.Entities.Cube;
+using VRageMath;
 using Iv4xr.SpaceEngineers.WorldModel;
 using Sandbox.Game.Entities;
 using Sandbox.Game.Entities.Character;
@@ -86,8 +89,40 @@ namespace Iv4xr.SePlugin.Control
         private Block TargetWeaponBlock(MyCharacter character)
         {
             if (!(character.CurrentWeapon is MyEngineerToolBase wp)) return null;
-            var slimBlock = wp.GetTargetBlock();
+            var slimBlock = wp.GetTargetBlock() ?? StrahlBlock(character, wp.MaximumShotLength + 1.0);
             return slimBlock == null ? null : m_entityBuilder.CreateAndFill(slimBlock);
+        }
+
+        /// <summary>
+        /// TG: Rueckfall, wenn das Werkzeug selbst (noch) keinen Block meldet: eigener Sichtstrahl
+        /// vom Kopf der Figur in Blickrichtung, Laenge etwa die Reichweite des Werkzeugs.
+        /// </summary>
+        private static MySlimBlock StrahlBlock(MyCharacter character, double laenge)
+        {
+            var kopf = character.GetHeadMatrix(false, true);
+            var von = kopf.Translation;
+            var bis = von + kopf.Forward * System.Math.Max(laenge, 2.5);
+            var linie = new LineD(von, bis);
+            var treffer = new List<MyLineSegmentOverlapResult<MyEntity>>();
+            MyGamePruningStructure.GetTopmostEntitiesOverlappingRay(ref linie, treffer);
+            MySlimBlock naechster = null;
+            var abstand = double.MaxValue;
+            foreach (var t in treffer)
+            {
+                if (!(t.Element is MyCubeGrid grid)) continue;
+                var zelle = grid.RayCastBlocks(von, bis);
+                if (!zelle.HasValue) continue;
+                var block = grid.GetCubeBlock(zelle.Value);
+                if (block == null) continue;
+                var d = Vector3D.DistanceSquared(von, grid.GridIntegerToWorld(zelle.Value));
+                if (d < abstand)
+                {
+                    abstand = d;
+                    naechster = block;
+                }
+            }
+
+            return naechster;
         }
 
         private Block TargetDetectorBlock(MyCharacter character)
