@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -99,6 +99,175 @@ namespace Iv4xr.SePlugin.Control
             var p = defs.Prefabs[0];
             var grids = p.CubeGrids ?? (p.CubeGrid != null ? new[] { p.CubeGrid } : null);
             return Einfuegen(grids, distance);
+        }
+
+        public TgGridReport GridReport(string gridId)
+        {
+            var grid = ZielGrid(gridId);
+            var bericht = new TgGridReport
+            {
+                Name = grid.DisplayName,
+                IsStatic = grid.IsStatic,
+                Blocks = grid.BlocksCount,
+                TerminalBlocks = new List<TgBlockReport>(),
+            };
+
+            var bloecke = grid.GetFatBlocks().OfType<Sandbox.ModAPI.IMyTerminalBlock>().ToList();
+
+            // Bezugsinventar: das groesste Inventar eines Containers, sonst irgendein groesstes Inventar
+            IMyInventory bezug = null;
+            Sandbox.ModAPI.IMyTerminalBlock bezugBlock = null;
+            foreach (var b in bloecke.Where(b => b.HasInventory))
+            {
+                var inv = b.GetInventory(0);
+                var istContainer = b is Sandbox.ModAPI.IMyCargoContainer;
+                var bisherContainer = bezugBlock is Sandbox.ModAPI.IMyCargoContainer;
+                if (bezug == null || (istContainer && !bisherContainer) ||
+                    (istContainer == bisherContainer && (double)inv.MaxVolume > (double)bezug.MaxVolume))
+                {
+                    bezug = inv;
+                    bezugBlock = b;
+                }
+            }
+
+            bericht.ReferenceInventory = bezugBlock?.CustomName;
+
+            foreach (var b in bloecke)
+            {
+                var slim = ((MyCubeBlock)b).SlimBlock;
+                var e = new TgBlockReport
+                {
+                    Name = b.CustomName,
+                    Type = b.BlockDefinition.TypeIdString.Replace("MyObjectBuilder_", ""),
+                    Subtype = b.BlockDefinition.SubtypeName,
+                    Cell = $"{slim.Min.X},{slim.Min.Y},{slim.Min.Z}",
+                    Functional = b.IsFunctional,
+                    Working = b.IsWorking,
+                    Enabled = (b as Sandbox.ModAPI.IMyFunctionalBlock)?.Enabled,
+                };
+
+                if (b.HasInventory)
+                {
+                    var teile = new List<string>();
+                    for (var i = 0; i < b.InventoryCount; i++)
+                    {
+                        var inv = b.GetInventory(i);
+                        var items = new List<VRage.Game.ModAPI.Ingame.MyInventoryItem>();
+                        inv.GetItems(items);
+                        teile.Add($"[{(double)inv.CurrentVolume * 1000:0}/{(double)inv.MaxVolume * 1000:0} L" +
+                                  (items.Count > 0
+                                          ? ": " + string.Join(", ", items.Select(it =>
+                                                  $"{(double)it.Amount:0.##} {it.Type.SubtypeId}"))
+                                          : "") + "]");
+                    }
+
+                    e.Inventory = string.Join(" ", teile);
+                    if (bezug != null && b != bezugBlock)
+                    {
+                        var verbunden = false;
+                        for (var i = 0; i < b.InventoryCount && !verbunden; i++)
+                        {
+                            verbunden = b.GetInventory(i).IsConnectedTo(bezug);
+                        }
+
+                        e.ConveyorToReference = verbunden;
+                    }
+                }
+
+                var details = new List<string>();
+                if (b is Sandbox.ModAPI.IMyBatteryBlock akku)
+                {
+                    bericht.BatteryStoredMWh += akku.CurrentStoredPower;
+                    bericht.BatteryMaxMWh += akku.MaxStoredPower;
+                    details.Add($"Ladung {akku.CurrentStoredPower:0.###}/{akku.MaxStoredPower:0.###} MWh, {akku.ChargeMode}");
+                }
+
+                if (b is Sandbox.ModAPI.IMyPowerProducer erzeuger)
+                {
+                    bericht.PowerOutputMW += erzeuger.CurrentOutput;
+                    bericht.PowerMaxMW += erzeuger.MaxOutput;
+                    details.Add($"Leistung {erzeuger.CurrentOutput:0.###}/{erzeuger.MaxOutput:0.###} MW");
+                }
+
+                if (b is global::SpaceEngineers.Game.ModAPI.IMyAirVent luft)
+                {
+                    details.Add($"Raum dicht {luft.CanPressurize}, O2 {luft.GetOxygenLevel() * 100:0} %, {luft.Status}");
+                }
+
+                if (b is Sandbox.ModAPI.IMyDoor tuer)
+                {
+                    details.Add($"Tuer {tuer.Status}");
+                }
+
+                if (b is Sandbox.ModAPI.IMyProductionBlock prod)
+                {
+                    details.Add($"produziert {prod.IsProducing}, Warteschlange leer {prod.IsQueueEmpty}");
+                }
+
+                e.Detail = details.Count > 0 ? string.Join("; ", details) : null;
+                bericht.TerminalBlocks.Add(e);
+            }
+
+            return bericht;
+        }
+
+        public void RenameGrid(string gridId, string name)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                throw new ArgumentException("Name fehlt");
+            }
+
+            ((IMyCubeGrid)ZielGrid(gridId)).CustomName = name.Trim();
+        }
+
+        public void RenameBlock(string gridId, int x, int y, int z, string name)
+        {
+            var block = BlockAnZelle(gridId, x, y, z).FatBlock as Sandbox.ModAPI.IMyTerminalBlock;
+            if (block == null)
+            {
+                throw new ArgumentException($"An {x},{y},{z} steht kein Terminal-Block");
+            }
+
+            block.CustomName = name;
+        }
+
+        public void AddItem(string gridId, int x, int y, int z, string typeId, string subtypeId, double amount)
+        {
+            if (!Sync.IsServer)
+            {
+                throw new InvalidOperationException("Nur im eigenen Spiel (Einzelspieler oder Gastgeber)");
+            }
+
+            var block = BlockAnZelle(gridId, x, y, z).FatBlock;
+            if (block == null || !block.HasInventory)
+            {
+                throw new ArgumentException($"An {x},{y},{z} steht kein Block mit Inventar");
+            }
+
+            var id = new MyDefinitionId(MyObjectBuilderType.Parse(
+                typeId.StartsWith("MyObjectBuilder_") ? typeId : "MyObjectBuilder_" + typeId), subtypeId);
+            var ob = (MyObjectBuilder_PhysicalObject)MyObjectBuilderSerializer.CreateNewObject(id);
+            var inv = (IMyInventory)block.GetInventory(0);
+            var menge = (VRage.MyFixedPoint)amount;
+            if (!inv.CanItemsBeAdded(menge, id))
+            {
+                throw new InvalidOperationException("Passt nicht ins Inventar");
+            }
+
+            inv.AddItems(menge, ob);
+        }
+
+        private static Sandbox.Game.Entities.Cube.MySlimBlock BlockAnZelle(string gridId, int x, int y, int z)
+        {
+            var grid = ZielGrid(gridId);
+            var block = grid.GetCubeBlock(new Vector3I(x, y, z));
+            if (block == null)
+            {
+                throw new ArgumentException($"An {x},{y},{z} steht kein Block");
+            }
+
+            return block;
         }
 
         // ---------------------------------------------------------------------------------------------

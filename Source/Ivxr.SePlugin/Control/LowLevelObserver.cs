@@ -166,12 +166,11 @@ namespace Iv4xr.SePlugin.Control
         public MyCubeGrid GetGridContainingBlock(string blockId)
         {
             BoundingSphereD sphere = GetBoundingSphere( );
-            return EnumerateSurroundingEntities(sphere)
-                    .OfType<MyCubeGrid>().ToList().FirstOrDefault(grid =>
-                    {
-                        return grid.CubeBlocks.FirstOrDefault(block => block.BlockId().ToString() == blockId) !=
-                               null;
-                    });
+            Func<MyCubeGrid, bool> hatBlock = grid =>
+                    grid.CubeBlocks.FirstOrDefault(block => block.BlockId().ToString() == blockId) != null;
+            // TG: erst im Umkreis der Figur, dann in allen Grids der Welt suchen
+            return EnumerateSurroundingEntities(sphere).OfType<MyCubeGrid>().ToList().FirstOrDefault(hatBlock)
+                   ?? MyEntities.GetEntities().OfType<MyCubeGrid>().ToList().FirstOrDefault(hatBlock);
         }
 
         public MySlimBlock GetBlockByIdOrNull(string blockId)

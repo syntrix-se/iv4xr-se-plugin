@@ -141,7 +141,8 @@ namespace Iv4xr.SePlugin.Control
             var newBlocksByGridPositions = new Dictionary<Vector3I, MySlimBlock>();
             var callback = new Action<MyCubeGrid, MySlimBlock>((grid, block) =>
             {
-                newBlocksByGridPositions.Add(block.Position, block);
+                // TG: nach Min, nicht nach Position (bei Bloecken mit mehreren Zellen liegt Position in der Mitte)
+                newBlocksByGridPositions[block.Min] = block;
             });
             BlockBuiltAn(callback);
             currentGrid.BuildBlocks(colorRgb?.RgbToHsv() ?? MyPlayer.SelectedColor, skinId,
