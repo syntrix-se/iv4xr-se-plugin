@@ -30,9 +30,12 @@
     <Reference Include="VRage.UserInterface"><HintPath>$(Bin64Dir)VRage.UserInterface.dll</HintPath><Private>False</Private></Reference>
   </ItemGroup>
 
+  <!-- TG: Quelltexte der beiden Nebenprojekte direkt mitkompilieren statt sie zu referenzieren.
+       Pulsar ruft beim Laden GetTypes() auf; da muessen Basisklassen und Schnittstellen
+       (Entity, ISpaceEngineers, ILog ...) schon in derselben DLL liegen. -->
   <ItemGroup>
-    <ProjectReference Include="..\Ivxr.SpaceEngineers\Ivxr.SpaceEngineers.csproj" />
-    <ProjectReference Include="..\Ivxr.PlugIndependentLib\Ivxr.PlugIndependentLib.csproj" />
+    <Compile Include="..\Ivxr.SpaceEngineers\**\*.cs" Exclude="..\Ivxr.SpaceEngineers\obj\**;..\Ivxr.SpaceEngineers\bin\**" LinkBase="Linked\Ivxr.SpaceEngineers" />
+    <Compile Include="..\Ivxr.PlugIndependentLib\**\*.cs" Exclude="..\Ivxr.PlugIndependentLib\obj\**;..\Ivxr.PlugIndependentLib\bin\**" LinkBase="Linked\Ivxr.PlugIndependentLib" />
   </ItemGroup>
 
   <ItemGroup>
