@@ -21,24 +21,34 @@ namespace Iv4xr.SePlugin
                 Log.WriteLine("Init already called.");
                 return;
             }
+            // TG: Plugin bleibt ganz aus (keine Schnittstelle, kein Eingriff in Eingabe und Takt),
+            // solange die Schalterdatei fehlt. Gelesen nur beim Spielstart.
+            var schalter = Path.Combine(MyFileSystem.UserDataPath, "ivxr-an.txt");
+            if (!File.Exists(schalter))
+            {
+                VRage.Utils.MyLog.Default.WriteLineAndConsole($"TG iv4XR: {schalter} fehlt, Plugin bleibt aus.");
+                return;
+            }
+
             var config = GetConfiguration(MyFileSystem.UserDataPath) as IvxrPluginConfiguration;
 
             Context = new IvxrPluginContext(config.ToPluginConfig());
 
             Log = Context.Log;
             Log.WriteLine($"{nameof(IvxrPlugin)} initialization finished.");
+            VRage.Utils.MyLog.Default.WriteLineAndConsole("TG iv4XR: Schnittstelle startet auf 127.0.0.1.");
 
             Context.StartServer();
         }
 
         public void Update()
         {
-            Context.Update();
+            Context?.Update();
         }
 
         public void HandleInput()
         {
-            Context.HandleInput();
+            Context?.HandleInput();
         }
 
 
@@ -49,7 +59,7 @@ namespace Iv4xr.SePlugin
                 if (disposing)
                 {
                     // dispose managed state (managed objects).
-                    Context.Dispose();
+                    Context?.Dispose();
                 }
 
                 // TODO: Set large fields to null.

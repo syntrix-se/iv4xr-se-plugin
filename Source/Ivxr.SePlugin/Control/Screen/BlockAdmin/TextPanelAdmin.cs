@@ -38,7 +38,8 @@ namespace Iv4xr.SePlugin.Control.Screen.BlockAdmin
 
         public void SetText(string blockId, string text)
         {
-            BlockById(blockId).PanelComponent.Text = new StringBuilder(text);
+            // TG: SE 1.210 - Text ist kein StringBuilder mehr, oeffentlicher Weg ueber IMyTextSurface
+            ((Sandbox.ModAPI.Ingame.IMyTextSurface)BlockById(blockId).PanelComponent).WriteText(text);
         }
 
         public void SetAlignment(string blockId, int alignment)

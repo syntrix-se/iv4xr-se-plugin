@@ -17,6 +17,22 @@ namespace Iv4xr.SePlugin.Control
 {
     public class BlockPlacer
     {
+        // TG: MyCubeGrids.BlockBuilt per Reflection, weil der Publicizer Ereignis und Feld gleichen Namens sichtbar macht
+        private static readonly System.Reflection.EventInfo BlockBuiltEvent =
+                typeof(MyCubeGrids).GetEvent("BlockBuilt",
+                    System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public |
+                    System.Reflection.BindingFlags.NonPublic);
+
+        private static void BlockBuiltAn(Action<MyCubeGrid, MySlimBlock> callback)
+        {
+            BlockBuiltEvent.GetAddMethod(true).Invoke(null, new object[] { callback });
+        }
+
+        private static void BlockBuiltAus(Action<MyCubeGrid, MySlimBlock> callback)
+        {
+            BlockBuiltEvent.GetRemoveMethod(true).Invoke(null, new object[] { callback });
+        }
+
         private MyObjectBuilder_CubeBlock CubeBlockBuilderByBlockType(long ownerId, DefinitionId blockDefinitionId,
             Vector3 colorMask)
         {
@@ -81,10 +97,10 @@ namespace Iv4xr.SePlugin.Control
             blocksBuildQueue.Add(myBlockLocation);
             var newBlocks = new List<MySlimBlock>();
             var callback = new Action<MyCubeGrid, MySlimBlock>((grid, block) => { newBlocks.Add(block); });
-            MyCubeGrids.BlockBuilt += callback;
+            BlockBuiltAn(callback);
             currentGrid.BuildBlocks(colorRgb?.RgbToHsv() ?? MyPlayer.SelectedColor, skinId,
                 blocksBuildQueue, MySession.Static.LocalCharacterEntityId, MySession.Static.LocalPlayerId);
-            MyCubeGrids.BlockBuilt -= callback;
+            BlockBuiltAus(callback);
             if (newBlocks.Count == 0)
             {
                 throw new InvalidOperationException(
@@ -127,10 +143,10 @@ namespace Iv4xr.SePlugin.Control
             {
                 newBlocksByGridPositions.Add(block.Position, block);
             });
-            MyCubeGrids.BlockBuilt += callback;
+            BlockBuiltAn(callback);
             currentGrid.BuildBlocks(colorRgb?.RgbToHsv() ?? MyPlayer.SelectedColor, skinId,
                 blocksBuildQueue, MySession.Static.LocalCharacterEntityId, MySession.Static.LocalPlayerId);
-            MyCubeGrids.BlockBuilt -= callback;
+            BlockBuiltAus(callback);
             if (newBlocksByGridPositions.Count == 0)
             {
                 throw new InvalidOperationException(

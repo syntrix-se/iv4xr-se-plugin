@@ -52,7 +52,14 @@ namespace Iv4xr.SePlugin.Communication
 
         private async Task StartAsync()
         {
-            var server = new TcpListener(IPAddress.Parse(m_hostname), m_port);
+            // TG: immer nur lokal lauschen, egal was in ivxr-plugin.config steht
+            var address = IPAddress.Parse(m_hostname);
+            if (!IPAddress.IsLoopback(address))
+            {
+                Log.WriteLine($"TG: Hostname {m_hostname} ist nicht lokal, nehme 127.0.0.1.");
+                address = IPAddress.Loopback;
+            }
+            var server = new TcpListener(address, m_port);
             server.Start();
             Log.WriteLine(("Server started at port " + m_port));
             while (true)

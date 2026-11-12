@@ -1,0 +1,10 @@
+<Project>
+  <!-- TG: Bau gegen die DLLs der installierten Spielfassung statt gegen Keens Quellcode.
+       Bin64 laesst sich per -p:Bin64=... oder Directory.Build.props.user ueberschreiben. -->
+  <PropertyGroup>
+    <Bin64 Condition="'$(Bin64)' == ''">S:\Steam\steamapps\common\SpaceEngineers\Bin64</Bin64>
+    <Bin64Dir>$(Bin64)\</Bin64Dir>
+  </PropertyGroup>
+  <Import Project="$(MSBuildThisFileDirectory)Directory.Build.props.user"
+          Condition="Exists('$(MSBuildThisFileDirectory)Directory.Build.props.user')" />
+</Project>

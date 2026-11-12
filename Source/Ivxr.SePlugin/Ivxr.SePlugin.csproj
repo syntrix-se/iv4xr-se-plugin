@@ -1,18 +1,36 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <!-- TG: net48 wie das Spiel (Pulsar Legacy) -->
+    <TargetFramework>net48</TargetFramework>
+    <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>latest</LangVersion>
     <RootNamespace>Iv4xr.SePlugin</RootNamespace>
+    <AssemblyName>Iv4xr.TG</AssemblyName>
     <PackageVersion></PackageVersion>
     <AssemblyVersion>0.9.0</AssemblyVersion>
     <FileVersion></FileVersion>
   </PropertyGroup>
 
+  <!-- TG: Spiel-DLLs aus Bin64 statt ..\..\..\se\Sources (nur GoodAI hatte die Quellen) -->
   <ItemGroup>
-    <ProjectReference Include="..\..\..\se\Sources\Sandbox.Game\Sandbox.Game.csproj" />
-    <ProjectReference Include="..\..\..\se\Sources\SpaceEngineers.Game\SpaceEngineers.Game.csproj" />
-    <ProjectReference Include="..\..\..\se\Sources\VRage.Game\VRage.Game.csproj" />
-    <ProjectReference Include="..\..\..\se\Sources\VRage\VRage.csproj" />
+    <Reference Include="Sandbox.Common"><HintPath>$(Bin64Dir)Sandbox.Common.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="Sandbox.Game"><HintPath>$(Bin64Dir)Sandbox.Game.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="Sandbox.Graphics"><HintPath>$(Bin64Dir)Sandbox.Graphics.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="SpaceEngineers.Game"><HintPath>$(Bin64Dir)SpaceEngineers.Game.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="SpaceEngineers.ObjectBuilders"><HintPath>$(Bin64Dir)SpaceEngineers.ObjectBuilders.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="VRage"><HintPath>$(Bin64Dir)VRage.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="VRage.Game"><HintPath>$(Bin64Dir)VRage.Game.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="VRage.Library"><HintPath>$(Bin64Dir)VRage.Library.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="VRage.Math"><HintPath>$(Bin64Dir)VRage.Math.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="VRage.Input"><HintPath>$(Bin64Dir)VRage.Input.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="VRage.Audio"><HintPath>$(Bin64Dir)VRage.Audio.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="VRage.Render"><HintPath>$(Bin64Dir)VRage.Render.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="VRage.Network"><HintPath>$(Bin64Dir)VRage.Network.dll</HintPath><Private>False</Private></Reference>
+    <Reference Include="VRage.UserInterface"><HintPath>$(Bin64Dir)VRage.UserInterface.dll</HintPath><Private>False</Private></Reference>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Ivxr.SpaceEngineers\Ivxr.SpaceEngineers.csproj" />
     <ProjectReference Include="..\Ivxr.PlugIndependentLib\Ivxr.PlugIndependentLib.csproj" />
   </ItemGroup>
@@ -21,11 +39,43 @@
     <PackageReference Include="AustinHarris.JsonRpc" Version="1.2.3" />
     <PackageReference Include="ImpromptuInterface" Version="6.2.2" />
     <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+    <!-- TG: 13.0.3 statt 12.0.3 (Sicherheitsluecke GHSA-5crp-9r3c-p9vr), Pulsar bringt 13.0.0.0 mit -->
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <!-- TG: GoodAI nutzte interne Teile des Spiels (eigene Quellen); Publicizer macht sie sichtbar -->
+    <PackageReference Include="Krafs.Publicizer" Version="2.3.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
-  
+
+  <PropertyGroup>
+    <PublicizerRuntimeStrategies>Unsafe;IgnoresAccessChecksTo</PublicizerRuntimeStrategies>
+  </PropertyGroup>
+  <ItemGroup>
+    <Publicize Include="Sandbox.Game" />
+    <Publicize Include="SpaceEngineers.Game" />
+    <Publicize Include="Sandbox.Graphics" />
+    <DoNotPublicize Include="Sandbox.Game:Sandbox.Game.Entities.MyEntities.OnEntityAdd" />
+    <DoNotPublicize Include="Sandbox.Game:Sandbox.Game.Entities.MyCubeGrids.BlockBuilt" />
+  </ItemGroup>
+
   <PropertyGroup>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
+
+  <!-- TG: Abhaengigkeiten einbetten, damit Pulsar nur eine DLL braucht (aufgeloest in TgEinbettung.cs) -->
+  <Target Name="TgEinbetten" AfterTargets="ResolveAssemblyReferences">
+    <ItemGroup>
+      <EmbeddedResource Include="@(ReferenceCopyLocalPaths)" Condition="'%(ReferenceCopyLocalPaths.Extension)' == '.dll'">
+        <LogicalName>tg.%(ReferenceCopyLocalPaths.Filename)%(ReferenceCopyLocalPaths.Extension)</LogicalName>
+      </EmbeddedResource>
+    </ItemGroup>
+  </Target>
+
+  <!-- TG: fertige Einzel-DLL fuer Pulsar -->
+  <Target Name="TgPulsarDll" AfterTargets="Build">
+    <Copy SourceFiles="$(TargetPath)" DestinationFiles="$(MSBuildThisFileDirectory)..\..\tg-dist\Iv4xr.TG.dll" />
+    <Message Importance="high" Text="TG: Einzel-DLL $(MSBuildThisFileDirectory)..\..\tg-dist\Iv4xr.TG.dll" />
+  </Target>
 
 </Project>
