@@ -68,9 +68,10 @@ namespace Iv4xr.SePlugin.Control.Screen.Terminal
 
         bool GetSwitchById<TBlockType>(string id) where TBlockType : MyTerminalBlock
         {
+            // TG: Die Schalter entstehen erst, wenn ein Block ausgewaehlt ist; sonst false.
             return ControlById<MyTerminalControlOnOffSwitch<TBlockType>>(
                         MyTerminalControlFactory.GetControls(typeof(TBlockType)), id)
-                    .GetInstanceFieldOrThrow<MyGuiControlOnOffSwitch>("m_onOffSwitch").Value;
+                    .GetInstanceField<MyGuiControlOnOffSwitch>("m_onOffSwitch")?.Value ?? false;
         }
 
         private MyGuiControlGenericFunctionalBlock BlockControl =>
@@ -101,7 +102,7 @@ namespace Iv4xr.SePlugin.Control.Screen.Terminal
                         "Mit Admin.Character.ShowTerminal(blockId) an einem Block oeffnen.");
 
 
-            return new TerminalControlPanelData()
+            var daten = new TerminalControlPanelData()
             {
                 Search = UntypedController.SearchBox("m_searchBox").SearchText,
                 NewGroupName = UntypedController.TextBox("m_groupName").Text,
@@ -110,13 +111,33 @@ namespace Iv4xr.SePlugin.Control.Screen.Terminal
                 ShowBlockInTerminal = GetSwitchById<MyTerminalBlock>("ShowInTerminal"),
                 ShowBLockInToolbarConfig = GetSwitchById<MyTerminalBlock>("ShowInToolbarConfig"),
                 ShowOnHUD = GetSwitchById<MyTerminalBlock>("ShowOnHUD"),
-                Owner = BlockControl.GetInstanceFieldOrThrow<MyGuiControlLabel>("m_ownerLabel").Text ?? "",
-                TransferTo = TransferToCombobox.GetInstanceFieldOrThrow<List<MyGuiControlCombobox.Item>>("m_items")
-                        .Select(i => i.Value.ToString()).ToList(),
-                ShareBlock = ShareModeCombobox.GetInstanceFieldOrThrow<List<MyGuiControlCombobox.Item>>("m_items")
-                        .Select(i => i.Value.ToString()).ToList(),
-                ShareBlockSelectedIndex = ShareModeCombobox.GetSelectedIndex().ToNullIfMinusOne(),
+                Owner = "",
+                TransferTo = new List<string>(),
+                ShareBlock = new List<string>(),
             };
+
+            // TG: Besitzer- und Teilen-Felder gibt es nur mit ausgewaehltem Block
+            var blockControl = UntypedController.GetInstanceField<MyGuiControlGenericFunctionalBlock>("blockControl");
+            if (blockControl != null)
+            {
+                daten.Owner = blockControl.GetInstanceField<MyGuiControlLabel>("m_ownerLabel")?.Text ?? "";
+                var transfer = blockControl.GetInstanceField<MyGuiControlCombobox>("m_transferToCombobox");
+                var share = blockControl.GetInstanceField<MyGuiControlCombobox>("m_shareModeCombobox");
+                if (transfer != null)
+                {
+                    daten.TransferTo = transfer.GetInstanceField<List<MyGuiControlCombobox.Item>>("m_items")
+                            ?.Select(i => i.Value.ToString()).ToList() ?? new List<string>();
+                }
+
+                if (share != null)
+                {
+                    daten.ShareBlock = share.GetInstanceField<List<MyGuiControlCombobox.Item>>("m_items")
+                            ?.Select(i => i.Value.ToString()).ToList() ?? new List<string>();
+                    daten.ShareBlockSelectedIndex = share.GetSelectedIndex().ToNullIfMinusOne();
+                }
+            }
+
+            return daten;
         }
 
         public void FilterBlocks(string text)
