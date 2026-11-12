@@ -18,6 +18,7 @@ namespace Iv4xr.SpaceEngineers
         IScreens Screens { get; }
         IInput Input { get; }
         IDebug Debug { get; }
+        ITg Tg { get; } // TG-Erweiterungen
     }
     
     public interface ISessionController

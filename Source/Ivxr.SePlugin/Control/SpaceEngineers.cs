@@ -28,6 +28,7 @@ namespace Iv4xr.SePlugin.Control
 
         public IBlocks Blocks { get; }
         public IDebug Debug { get; }
+        public ITg Tg { get; }
 
         internal RealSpaceEngineers(GameSession gameSession, ILog log, PluginConfig config)
         {
@@ -48,6 +49,7 @@ namespace Iv4xr.SePlugin.Control
             Screens = new Screens();
             Input = RealInput.Instance;
             Debug = new DebugData();
+            Tg = new TgWerkzeuge();
         }
 
         public RealSpaceEngineers(
