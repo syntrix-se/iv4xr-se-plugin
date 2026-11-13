@@ -114,16 +114,17 @@ namespace Iv4xr.SePlugin.Control
 
             var bloecke = grid.GetFatBlocks().OfType<Sandbox.ModAPI.IMyTerminalBlock>().ToList();
 
-            // Bezugsinventar: das groesste Inventar eines Containers, sonst irgendein groesstes Inventar
+            // Bezugsinventar: ein TG-Lager-Controller (Lager vor Erz und Munition), sonst das groesste
+            // Inventar eines Containers, sonst irgendein groesstes Inventar
             IMyInventory bezug = null;
             Sandbox.ModAPI.IMyTerminalBlock bezugBlock = null;
             foreach (var b in bloecke.Where(b => b.HasInventory))
             {
                 var inv = b.GetInventory(0);
-                var istContainer = b is Sandbox.ModAPI.IMyCargoContainer;
-                var bisherContainer = bezugBlock is Sandbox.ModAPI.IMyCargoContainer;
-                if (bezug == null || (istContainer && !bisherContainer) ||
-                    (istContainer == bisherContainer && (double)inv.MaxVolume > (double)bezug.MaxVolume))
+                var rang = BezugsRang(b);
+                var bisherRang = bezugBlock == null ? -1 : BezugsRang(bezugBlock);
+                if (bezug == null || rang > bisherRang ||
+                    (rang == bisherRang && (double)inv.MaxVolume > (double)bezug.MaxVolume))
                 {
                     bezug = inv;
                     bezugBlock = b;
@@ -209,6 +210,16 @@ namespace Iv4xr.SePlugin.Control
             }
 
             return bericht;
+        }
+
+        /// <summary>Rang fuer das Bezugsinventar: TG-Lager-Controller 3 (Lager) bzw. 2 (Erz, Munition),
+        /// andere Frachtcontainer 1, sonst 0.</summary>
+        private static int BezugsRang(Sandbox.ModAPI.IMyTerminalBlock b)
+        {
+            var sub = b.BlockDefinition.SubtypeName ?? "";
+            if (sub.StartsWith("TG_StorageController_")) return 3;
+            if (sub.StartsWith("TG_OreController_") || sub.StartsWith("TG_AmmoController_")) return 2;
+            return b is Sandbox.ModAPI.IMyCargoContainer ? 1 : 0;
         }
 
         public List<string> RemoveGrid(string gridId)
