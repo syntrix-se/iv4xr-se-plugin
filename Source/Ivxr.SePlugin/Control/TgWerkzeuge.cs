@@ -268,6 +268,29 @@ namespace Iv4xr.SePlugin.Control
             ((IMyCubeGrid)ZielGrid(gridId)).CustomName = name.Trim();
         }
 
+        /// <summary>
+        /// Chat-Befehl wie getippt: MyAPIUtilities.EnterMessage ist der Weg, ueber den der Spiel-Chat Eingaben an die
+        /// Mods gibt (MessageEntered/MessageEnteredSender). Absender ist der eigene Spieler.
+        /// </summary>
+        public bool Chat(string text)
+        {
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                throw new ArgumentException("Text fehlt");
+            }
+
+            var utilities = MyAPIGateway.Utilities as MyAPIUtilities;
+            if (utilities == null)
+            {
+                throw new InvalidOperationException("MyAPIGateway.Utilities ist nicht verfuegbar");
+            }
+
+            var weiter = true;
+            utilities.EnterMessage(Sync.MyId, text.Trim(), ref weiter);
+            MyLog.Default.WriteLine("TG iv4XR: Chat-Befehl " + text.Trim() + (weiter ? " (von keiner Mod abgefangen)" : ""));
+            return weiter;
+        }
+
         public void RenameBlock(string gridId, int x, int y, int z, string name)
         {
             var block = BlockAnZelle(gridId, x, y, z).FatBlock as Sandbox.ModAPI.IMyTerminalBlock;

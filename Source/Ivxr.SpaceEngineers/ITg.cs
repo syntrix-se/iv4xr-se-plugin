@@ -39,6 +39,10 @@ namespace Iv4xr.SpaceEngineers
 
         /// <summary>Legt amount Stueck des Gegenstands (z. B. Ore/Ice) in das erste Inventar des Blocks an Zelle (x, y, z). Nur im eigenen Spiel.</summary>
         void AddItem(string gridId, int x, int y, int z, string typeId, string subtypeId, double amount);
+
+        /// <summary>Gibt text so an die Mods weiter, als haette der Spieler ihn in den Chat getippt (Chat-Befehle wie /tgpoi).
+        /// Rueckgabe false = eine Mod hat ihn abgefangen; true = keine Mod wollte ihn (er geht dann nicht in den Chat).</summary>
+        bool Chat(string text);
     }
 
     public class TgExport
