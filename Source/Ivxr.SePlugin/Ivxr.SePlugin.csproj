@@ -9,7 +9,7 @@
     <AssemblyName>Iv4xr.TG</AssemblyName>
     <PackageVersion></PackageVersion>
     <AssemblyVersion>0.9.0</AssemblyVersion>
-    <FileVersion></FileVersion>
+    <FileVersion>0.9.0.1</FileVersion>
   </PropertyGroup>
 
   <!-- TG: Spiel-DLLs aus Bin64 statt ..\..\..\se\Sources (nur GoodAI hatte die Quellen) -->
